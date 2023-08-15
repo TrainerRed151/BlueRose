@@ -1,14 +1,15 @@
 using Chess
+using Chess.Book
 
 
 #fen = "r2qkb1r/pp2nppp/3p4/2pNN1B1/2BnP3/3P4/PPP2PPP/R2bK2R w KQkq - 1 0"
 #fen = "1rb4r/pkPp3p/1b1P3n/1Q6/N3Pp2/8/P1P3PP/7K w - - 1 0"
 #fen = "3q1r1k/2p4p/1p1pBrp1/p2Pp3/2PnP3/5PP1/PP1Q2K1/5R1R w - - 1 0"
-fen = "r5rk/2p1Nppp/3p3P/pp2p1P1/4P3/2qnPQK1/8/R6R w - - 1 0"
+#fen = "r5rk/2p1Nppp/3p3P/pp2p1P1/4P3/2qnPQK1/8/R6R w - - 1 0"
 #fen = "r4rk1/5pp1/1p3n1p/1Nb5/7P/1BP2Q2/5PP1/3R2K1 w - - 3 27"
 
-b = fromfen(fen)
-#global b = startboard()
+#b = fromfen(fen)
+global b = startboard()
 
 function minimax(board, depth, alpha, beta)
     if ischeckmate(board)
@@ -76,9 +77,15 @@ function minimax(board, depth, alpha, beta)
 end
 
 function ai()
-    score, move = minimax(b, 8, -100, 100)
-    println("$(movetosan(b, move)): $score")
-    domove!(b, move)
+    opening_move = pickbookmove(b)
+    if opening_move == nothing
+        score, move = minimax(b, 8, -100, 100)
+        println("$(movetosan(b, move)): $score")
+        domove!(b, move)
+    else
+        println("$(movetosan(b, opening_move)): Book move")
+        domove!(b, opening_move)
+    end
     println(b)
 end
 
@@ -94,4 +101,4 @@ function me(move)
     end
 end
 
-ai()
+#ai()
