@@ -1,77 +1,96 @@
-# https://www.wtharvey.com/
+#!/usr/bin/env python
+
 import chess
 import chess.polyglot
-import time
-import sys
 
-#fen = 'r2qkb1r/pp2nppp/3p4/2pNN1B1/2BnP3/3P4/PPP2PPP/R2bK2R w KQkq - 1 0'
-#fen = '1rb4r/pkPp3p/1b1P3n/1Q6/N3Pp2/8/P1P3PP/7K w - - 1 0'
-#fen = '3q1r1k/2p4p/1p1pBrp1/p2Pp3/2PnP3/5PP1/PP1Q2K1/5R1R w - - 1 0'
-#fen = 'r5rk/2p1Nppp/3p3P/pp2p1P1/4P3/2qnPQK1/8/R6R w - - 1 0'
-#fen = 'r4rk1/5pp1/1p3n1p/1Nb5/7P/1BP2Q2/5PP1/3R2K1 w - - 3 27'
-fen = "r4rk1/1bp1qppp/2p5/p1B5/1PQ5/8/P1P2PPP/R4RK1 b - - 1 0"
-#fen = chess.STARTING_FEN
+class BlueRose:
+    def __init__(self):
+        self.opening_book = chess.polyglot.open_reader("Titans.bin")
+        self.board = chess.Board()
+        self.value_map = [0, 1, 3, 3, 5, 9, 0]
 
-board = chess.Board(fen)
-opening_book = chess.polyglot.open_reader("Titans.bin")
+    def minimax(self, depth, alpha, beta):
+        if self.board.is_checkmate():
+            return -100 if self.board.turn else 100, None
+        if self.board.is_stalemate():
+            return 0, None
 
-value_map = [0, 1, 3, 3, 5, 9, 0]
+        if depth == 0:
+            score = 0
+            for p in self.board.piece_map().values():
+                color = 1 if p.color else -1
+                score += (self.value_map[p.piece_type] * color)
 
+            return score, None
 
-def minimax(depth, alpha, beta):
-    if board.is_checkmate():
-        return -100 if board.turn else 100, None
-    if board.is_stalemate():
-        return 0, None
+        best_score = -100 if self.board.turn else 100
+        best_move = None
 
-    if depth == 0:
-        score = 0
-        for p in board.piece_map().values():
-            color = 1 if p.color else -1
-            score += (value_map[p.piece_type] * color)
+        for move in self.board.legal_moves:
+            board.push(move)
+            value, _ = self.minimax(depth - 1, alpha, beta)
+            board.pop()
 
-        return score, None
+            if self.board.turn:
+                if value > best_score:
+                    best_score, best_move = value, move
 
-    best_score = -100 if board.turn else 100
-    best_move = None
+                if value >= beta:
+                    break
+                alpha = max(value, alpha)
 
-    for move in board.legal_moves:
-        board.push(move)
-        value, _ = minimax(depth - 1, alpha, beta)
-        board.pop()
+            else:
+                if value < best_score:
+                    best_score, best_move = value, move
 
-        if board.turn:
-            if value > best_score:
-                best_score, best_move = value, move
+                if value <= alpha:
+                    break
+                beta = min(value, beta)
 
-            if value >= beta:
-                break
-            alpha = max(value, alpha)
+        return best_score, best_move
 
-        else:
-            if value < best_score:
-                best_score, best_move = value, move
+    def ai(self, depth):
+        try:
+            move = self.opening_book.weighted_choice(self.board).move
+            score = 0
+        except IndexError:
+            score, move = self.minimax(depth, -100, 100)
 
-            if value <= alpha:
-                break
-            beta = min(value, beta)
+        return score, move
 
-    return best_score, best_move
+    def uci(self, command):
+        if command == 'uci':
+            print('id name BlueRose 1')
+            print('id author Brian Pomerantz')
+            print('uciok')
 
-def chess_ai(depth):
-    try:
-        move = opening_book.weighted_choice(board).move
-        score = 'B'
-    except IndexError:
-        score, move = minimax(depth, -100, 100)
+        elif command == 'isready':
+            print('readyok')
 
-    return score, move
+        elif command == 'ucinewgame':
+            self.board = chess.Board()
 
+        elif 'position' in command:
+            args = command.split()
+            fen = args[1]
+            if fen == 'startpos':
+                fen = chess.STARTING_FEN
 
-depth = int(sys.argv[1])
-t1 = time.time()
-score, move = chess_ai(depth)
-t2 = time.time()
-print(f'{board.san(move)}: {score}')
-print(t2-t1)
-#print(score)
+            self.board = chess.Board(fen)
+
+        elif 'go' in command:
+            score, move = self.ai(6)
+            print(f'info score {score*100}')
+            print(f'bestmove {self.board.uci(move)}')
+
+        elif command == 'quit':
+            return 1
+
+        return 0
+
+if __name__ == '__main__':
+    engine = BlueRose()
+    result = 0
+    while result == 0:
+        uci_input = input()
+        result = engine.uci(uci_input)
