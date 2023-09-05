@@ -27,9 +27,9 @@ class BlueRose:
         best_move = None
 
         for move in self.board.legal_moves:
-            board.push(move)
+            self.board.push(move)
             value, _ = self.minimax(depth - 1, alpha, beta)
-            board.pop()
+            self.board.pop()
 
             if self.board.turn:
                 if value > best_score:
@@ -77,6 +77,11 @@ class BlueRose:
                 fen = chess.STARTING_FEN
 
             self.board = chess.Board(fen)
+
+            if len(args) > 2 and args[2] == 'moves':
+                for move in args[3:]:
+                    move_obj = chess.Move.from_uci(move)
+                    self.board.push(move_obj)
 
         elif 'go' in command:
             score, move = self.ai(6)
