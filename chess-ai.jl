@@ -7,9 +7,10 @@ using Chess.Book
 #fen = "3q1r1k/2p4p/1p1pBrp1/p2Pp3/2PnP3/5PP1/PP1Q2K1/5R1R w - - 1 0"
 #fen = "r5rk/2p1Nppp/3p3P/pp2p1P1/4P3/2qnPQK1/8/R6R w - - 1 0"
 #fen = "r4rk1/5pp1/1p3n1p/1Nb5/7P/1BP2Q2/5PP1/3R2K1 w - - 3 27"
+fen = "r4rk1/1bp1qppp/2p5/p1B5/1PQ5/8/P1P2PPP/R4RK1 b - - 1 0"
 
-#b = fromfen(fen)
-global b = startboard()
+b = fromfen(fen)
+#global b = startboard()
 
 function minimax(board, depth, alpha, beta)
     if ischeckmate(board)
@@ -79,7 +80,7 @@ end
 function ai()
     opening_move = pickbookmove(b)
     if opening_move == nothing
-        score, move = minimax(b, 8, -100, 100)
+        score, move = minimax(b, 6, -100, 100)
         println("$(movetosan(b, move)): $score")
         domove!(b, move)
     else
@@ -101,4 +102,4 @@ function me(move)
     end
 end
 
-#ai()
+@time ai()
