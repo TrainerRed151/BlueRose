@@ -85,7 +85,7 @@ class BlueRose:
 
         elif 'go' in command:
             score, move = self.ai(6)
-            print(f'info score {score*100}')
+            print(f'info score cp {score*100}')
             print(f'bestmove {self.board.uci(move)}')
 
         elif command == 'quit':
