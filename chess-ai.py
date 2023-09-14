@@ -75,7 +75,7 @@ class BlueRose:
         best_score, best_move, nodes = self.negamax(depth, -MAX_SCORE, MAX_SCORE, time_limit)
         best_score *= color
 
-        time_ms = int((time.time() - t1) * 1000)
+        time_ms = int((time.time() - t1) * 1000) + 1
         nps = int(nodes/time_ms * 1000)
         print(f'info depth 1 multipv 1 score cp {100*best_score} nodes {nodes} nps {nps} time {time_ms} pv {self.board.uci(best_move)}', flush=True)
 
@@ -93,7 +93,7 @@ class BlueRose:
             best_score = color*new_score
             best_move = new_move
 
-            time_ms = int((time.time() - t1) * 1000)
+            time_ms = int((time.time() - t1) * 1000) + 1
             nps = int(nodes/time_ms * 1000)
             print(f'info depth {depth} multipv 1 score cp {100*best_score} nodes {nodes} nps {nps} time {time_ms} pv {self.board.uci(best_move)}', flush=True)
 
@@ -112,15 +112,21 @@ class BlueRose:
             self.board = chess.Board()
 
         elif 'position' in command:
-            args = command.split()
-            fen = args[1]
+            mi = -1
+            if 'moves' in command:
+                mi = command.index('moves') - 1
+                fen = command[7:mi]
+             else:
+                fen = command[7:]
+
             if fen == 'startpos':
                 fen = chess.STARTING_FEN
 
             self.board = chess.Board(fen)
 
-            if len(args) > 2 and args[2] == 'moves':
-                for move in args[3:]:
+            if mi != -1:
+                move_list = command[mi+i:].split()[1:]
+                for move in moves_list:
                     move_obj = chess.Move.from_uci(move)
                     self.board.push(move_obj)
 
