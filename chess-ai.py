@@ -2,6 +2,7 @@
 
 import chess
 #import chess.polyglot
+import threading
 import time
 import sys
 
@@ -124,24 +125,16 @@ class BlueRose:
                     self.board.push(move_obj)
 
         elif 'go' in command:
-            score, move = self.ai(10)
+            score, move = self.ai(2)
             print(f'bestmove {self.board.uci(move)}', flush=True)
 
-        elif command == 'quit':
-            return 1
-
-        return 0
 
 if __name__ == '__main__':
     engine = BlueRose()
-    result = 0
     print('BlueRose 1 by Brian Pomerantz', flush=True)
-    f = open('uci.log', 'w')
-    while result == 0:
+    while True:
         uci_input = input()
-        f.write(f'{uci_input}\n')
-        try:
-            result = engine.uci(uci_input)
-        except Exception e:
-            f.write(e)
-            f.close()
+        if uci_input == 'quit':
+            break
+        x = threading.Thread(target=engine.uci, args=(uci_input,), daemon=True)
+        x.start()
