@@ -19,7 +19,8 @@ class BlueRose:
             return None, None, 0
 
         if self.board.is_checkmate():
-            score = MAX_SCORE if self.board.turn else -MAX_SCORE
+            #score = -MAX_SCORE if self.board.turn else MAX_SCORE
+            score = -MAX_SCORE
             return score, None, 1
 
         if self.board.is_stalemate():
@@ -115,9 +116,9 @@ class BlueRose:
             mi = -1
             if 'moves' in command:
                 mi = command.index('moves') - 1
-                fen = command[7:mi]
-             else:
-                fen = command[7:]
+                fen = command[8:mi]
+            else:
+                fen = command[8:]
 
             if fen == 'startpos':
                 fen = chess.STARTING_FEN
@@ -125,13 +126,13 @@ class BlueRose:
             self.board = chess.Board(fen)
 
             if mi != -1:
-                move_list = command[mi+i:].split()[1:]
+                moves_list = command[mi+1:].split()[1:]
                 for move in moves_list:
                     move_obj = chess.Move.from_uci(move)
                     self.board.push(move_obj)
 
         elif 'go' in command:
-            score, move = self.ai(2)
+            score, move = self.ai(10)
             print(f'bestmove {self.board.uci(move)}', flush=True)
 
 
