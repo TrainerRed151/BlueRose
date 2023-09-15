@@ -116,9 +116,9 @@ class BlueRose:
             mi = -1
             if 'moves' in command:
                 mi = command.index('moves') - 1
-                fen = command[8:mi]
+                fen = command[9:mi]
             else:
-                fen = command[8:]
+                fen = command[9:]
 
             if fen == 'startpos':
                 fen = chess.STARTING_FEN
