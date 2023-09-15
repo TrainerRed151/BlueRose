@@ -123,7 +123,7 @@ class BlueRose:
         else:
             return None, zhash
 
-    def negamax(self, depth, alpha, beta, time_limit, first=False):
+    def negamax(self, depth, alpha, beta, time_limit):
         global kill_search
         if kill_search or time.time() > time_limit:
             return None, None, 0
@@ -131,7 +131,7 @@ class BlueRose:
         alphaOrig = alpha
 
         ttEntry, zhash = self.transposition_table_lookup()
-        if not first and ttEntry and ttEntry[ttDEPTH] >= depth:
+        if ttEntry and ttEntry[ttDEPTH] >= depth:
             if ttEntry[ttFLAG] == ttEXACT:
                 return ttEntry[ttVALUE], None, 1
             elif ttEntry[ttFLAG] == ttLOWERBOUND:
@@ -198,11 +198,13 @@ class BlueRose:
         return best_score, best_move, nodes
 
     def ai(self, move_time):
+        self.transposition_table.clear()
+
         t1 = time.time()
         time_limit = t1 + move_time
         depth = 1
         color = [-1, 1][self.board.turn]
-        best_score, best_move, nodes = self.negamax(depth, -MAX_SCORE, MAX_SCORE, time_limit, first=True)
+        best_score, best_move, nodes = self.negamax(depth, -MAX_SCORE, MAX_SCORE, time_limit)
         if best_move is None or best_score is None:
             return 0, list(self.board.legal_moves)[0]
 
@@ -216,7 +218,7 @@ class BlueRose:
                 return best_score, best_move
 
             depth += 1
-            new_score, new_move, new_nodes = self.negamax(depth, -MAX_SCORE, MAX_SCORE, time_limit, first=True)
+            new_score, new_move, new_nodes = self.negamax(depth, -MAX_SCORE, MAX_SCORE, time_limit)
             nodes += new_nodes
 
             if new_score is None:
