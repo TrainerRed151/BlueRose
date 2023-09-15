@@ -6,8 +6,8 @@ import time
 import sys
 
 
-MAX_SCORE = 100
-TIME_DENOM = 30
+MAX_SCORE = 100000
+MOVES_TO_ENDGAME = 30
 
 POSITION_VALUES = [
     # King (end game)
@@ -20,7 +20,7 @@ POSITION_VALUES = [
     -30,-10, 20, 30, 30, 20,-10,-30,
     -30,-30,  0,  0,  0,  0,-30,-30,
     -50,-30,-30,-30,-30,-30,-30,-50,
-    ]
+    ],
     # Pawn
     [
     0,  0,  0,  0,  0,  0,  0,  0,
@@ -172,7 +172,7 @@ class BlueRose:
         best_score *= color
         time_ms = int((time.time() - t1) * 1000) + 1
         nps = int(nodes/time_ms * 1000)
-        print(f'info depth 1 multipv 1 score cp {100*best_score} nodes {nodes} nps {nps} time {time_ms} pv {self.board.uci(best_move)}', flush=True)
+        print(f'info depth 1 multipv 1 score cp {best_score} nodes {nodes} nps {nps} time {time_ms} pv {self.board.uci(best_move)}', flush=True)
 
         while True:
             if best_score == color*MAX_SCORE:
@@ -190,7 +190,7 @@ class BlueRose:
 
             time_ms = int((time.time() - t1) * 1000) + 1
             nps = int(nodes/time_ms * 1000)
-            print(f'info depth {depth} multipv 1 score cp {100*best_score} nodes {nodes} nps {nps} time {time_ms} pv {self.board.uci(best_move)}', flush=True)
+            print(f'info depth {depth} multipv 1 score cp {best_score} nodes {nodes} nps {nps} time {time_ms} pv {self.board.uci(best_move)}', flush=True)
 
         return best_score, best_move
 
@@ -231,7 +231,9 @@ class BlueRose:
                 args = command.split()
                 idx = args.index(time_str) + 1
                 time_left = int(args[idx]) / 1000
-                time_denom = TIME_DENOM if self.board.ply() > 20 else TIME_DENOM * 1.5
+                time_denom = MOVES_TO_ENDGAME
+                if self.board.fullmove_number < 10:
+                    time_denom *= 1.5
                 time_limit = time_left // time_denom
 
             else:
