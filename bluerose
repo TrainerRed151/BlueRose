@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import chess
+import chess.polyglot
 import threading
 import time
 import sys
@@ -8,6 +9,9 @@ import sys
 
 MAX_SCORE = 100000
 MOVES_TO_ENDGAME = 30
+
+ttDEPTH, ttFLAG, ttVALUE = 0, 1, 2
+ttEXACT, ttLOWERBOUND, ttUPPERBOUND = 0, 1, 2
 
 POSITION_VALUES = [
     # King (end game)
@@ -96,6 +100,7 @@ PIECE_VALUES = [0, 100, 320, 330, 500, 900, 0]
 class BlueRose:
     def __init__(self):
         self.board = chess.Board()
+        self.transposition_table = {}
 
     def board_evaluation(self):
         score = 0
@@ -111,10 +116,31 @@ class BlueRose:
 
         return score
 
+    def transposition_table_lookup(self):
+        zhash = chess.polyglot.zobrist_hash(self.board)
+        if zhash in self.transposition_table:
+            return self.transposition_table[zhash], zhash
+        else:
+            return None, zhash
+
     def negamax(self, depth, alpha, beta, time_limit):
         global kill_search
         if kill_search or time.time() > time_limit:
             return None, None, 0
+
+        alphaOrig = alpha
+
+        ttEntry, zhash = self.transposition_table_lookup()
+        if ttEntry and ttEntry[ttDEPTH] >= depth:
+            if ttEntry[ttFLAG] == ttEXACT:
+                return ttEntry[ttVALUE], None, 1
+            elif ttEntry[ttFLAG] == ttLOWERBOUND:
+                alpha = max(alpha, ttEntry[ttVALUE])
+            elif ttEntry[ttFLAG] == ttUPPERBOUND:
+                beta = min(beta, ttEntry[ttVALUE])
+
+            if alpha >= beta:
+                return ttEntry[ttVALUE], None, 1
 
         if self.board.is_checkmate():
             score = -MAX_SCORE
@@ -154,9 +180,20 @@ class BlueRose:
             if value > best_score:
                 best_score, best_move = value, move
 
-            alpha = max(value, alpha)
+            alpha = max(best_score, alpha)
             if alpha >= beta:
                 break
+
+        new_ttEntry = [0, 0, 0]
+        new_ttEntry[ttVALUE] = best_score
+        if best_score <= alphaOrig:
+            new_ttEntry[ttFLAG] = ttUPPERBOUND
+        elif best_score >= beta:
+            new_ttEntry[ttFLAG] = ttLOWERBOUND
+        else:
+            new_ttEntry[ttFLAG] = ttEXACT
+        new_ttEntry[ttDEPTH] = depth
+        self.transposition_table[zhash] = new_ttEntry
 
         return best_score, best_move, nodes
 
@@ -237,7 +274,7 @@ class BlueRose:
                 time_limit = time_left // time_denom
 
             else:
-                time_limit = 30
+                time_limit = 1e12
 
             _, move = self.ai(time_limit)
             print(f'bestmove {self.board.uci(move)}', flush=True)
