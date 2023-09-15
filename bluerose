@@ -154,7 +154,7 @@ class BlueRose:
             if value > best_score:
                 best_score, best_move = value, move
 
-            alpha = max(value, alpha)
+            alpha = max(best_score, alpha)
             if alpha >= beta:
                 break
 
