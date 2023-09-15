@@ -7,6 +7,7 @@ import time
 import sys
 
 MAX_SCORE = 100
+TIME_DENOM = 30
 
 class BlueRose:
     def __init__(self):
@@ -19,11 +20,16 @@ class BlueRose:
             return None, None, 0
 
         if self.board.is_checkmate():
-            #score = -MAX_SCORE if self.board.turn else MAX_SCORE
             score = -MAX_SCORE
             return score, None, 1
 
         if self.board.is_stalemate():
+            return 0, None, 1
+
+        if self.board.is_insufficient_material():
+            return 0, None, 1
+
+        if self.board.is_repetition(3):
             return 0, None, 1
 
         if depth == 0:
@@ -80,6 +86,9 @@ class BlueRose:
         nps = int(nodes/time_ms * 1000)
         print(f'info depth 1 multipv 1 score cp {100*best_score} nodes {nodes} nps {nps} time {time_ms} pv {self.board.uci(best_move)}', flush=True)
 
+        if best_move is None:
+            return 0, self.board.legal_moves[0]
+
         while True:
             if best_score == color*MAX_SCORE:
                 return best_score, best_move
@@ -131,8 +140,19 @@ class BlueRose:
                     move_obj = chess.Move.from_uci(move)
                     self.board.push(move_obj)
 
-        elif 'go' in command:
-            score, move = self.ai(10)
+        elif 'go ' in command:
+            time_str = 'wtime' if self.board.turn else 'btime'
+            if time_str in command:
+                args = command.split()
+                idx = args.index(time_str) + 1
+                time_left = int(args[idx]) / 1000
+                time_denom = TIME_DENOM if self.board.ply() > 20 else TIME_DENOM * 1.5
+                time_limit = time_left // time_denom
+
+            else:
+                time_limit = 30
+
+            score, move = self.ai(time_limit)
             print(f'bestmove {self.board.uci(move)}', flush=True)
 
 
