@@ -16,7 +16,8 @@ class BlueRose:
         self.value_map = [0, 1, 3, 3, 5, 9, 0]
 
     def negamax(self, depth, alpha, beta, time_limit):
-        if time.time() > time_limit:
+        global kill_search
+        if kill_search or time.time() > time_limit:
             return None, None, 0
 
         if self.board.is_checkmate():
@@ -80,14 +81,13 @@ class BlueRose:
         depth = 1
         color = [-1, 1][self.board.turn]
         best_score, best_move, nodes = self.negamax(depth, -MAX_SCORE, MAX_SCORE, time_limit)
-        best_score *= color
+        if best_move is None or best_score is None:
+            return 0, list(self.board.legal_moves)[0]
 
+        best_score *= color
         time_ms = int((time.time() - t1) * 1000) + 1
         nps = int(nodes/time_ms * 1000)
         print(f'info depth 1 multipv 1 score cp {100*best_score} nodes {nodes} nps {nps} time {time_ms} pv {self.board.uci(best_move)}', flush=True)
-
-        if best_move is None:
-            return 0, self.board.legal_moves[0]
 
         while True:
             if best_score == color*MAX_SCORE:
@@ -140,7 +140,7 @@ class BlueRose:
                     move_obj = chess.Move.from_uci(move)
                     self.board.push(move_obj)
 
-        elif 'go ' in command:
+        elif 'go' in command:
             time_str = 'wtime' if self.board.turn else 'btime'
             if time_str in command:
                 args = command.split()
@@ -152,15 +152,24 @@ class BlueRose:
             else:
                 time_limit = 30
 
-            score, move = self.ai(time_limit)
+            _, move = self.ai(time_limit)
             print(f'bestmove {self.board.uci(move)}', flush=True)
+            global kill_search
+            kill_search = False
 
 
 if __name__ == '__main__':
     engine = BlueRose()
+    global kill_search
+    kill_search = False
     print('BlueRose 1 by Brian Pomerantz', flush=True)
+    f = open("uci.log", 'w')
     while True:
         uci_input = input()
+        f.write(uci_input + '\n')
+        if uci_input == 'stop':
+            kill_search = True
+            continue
         if uci_input == 'quit':
             break
         x = threading.Thread(target=engine.uci, args=(uci_input,), daemon=True)
