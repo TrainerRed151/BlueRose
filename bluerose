@@ -197,7 +197,7 @@ class BlueRose:
 
         return best_score, best_move, nodes
 
-    def ai(self, move_time):
+    def ai(self, move_time, max_depth):
         self.transposition_table.clear()
 
         t1 = time.time()
@@ -214,7 +214,7 @@ class BlueRose:
         print(f'info depth 1 multipv 1 score cp {best_score} nodes {nodes} nps {nps} time {time_ms} pv {self.board.uci(best_move)}', flush=True)
 
         while True:
-            if best_score == color*MAX_SCORE:
+            if abs(best_score) == MAX_SCORE:
                 return best_score, best_move
 
             depth += 1
@@ -230,6 +230,9 @@ class BlueRose:
             time_ms = int((time.time() - t1) * 1000) + 1
             nps = int(nodes/time_ms * 1000)
             print(f'info depth {depth} multipv 1 score cp {best_score} nodes {nodes} nps {nps} time {time_ms} pv {self.board.uci(best_move)}', flush=True)
+
+            if max_depth > 0 and depth >= max_depth:
+                break
 
         return best_score, best_move
 
@@ -265,6 +268,9 @@ class BlueRose:
                     self.board.push(move_obj)
 
         elif 'go' in command:
+            time_limit = 30*60
+            depth = -1
+
             time_str = 'wtime' if self.board.turn else 'btime'
             if time_str in command:
                 args = command.split()
@@ -275,10 +281,14 @@ class BlueRose:
                     time_denom *= 1.5
                 time_limit = time_left // time_denom
 
-            else:
-                time_limit = 1e12
+            elif 'movetime' in command:
+                time_limit = command.split()[2]
+                time_limit = int(time_limit) // 1000 - 3
 
-            _, move = self.ai(time_limit)
+            elif 'depth' in command:
+                depth = int(command.split()[2])
+
+            _, move = self.ai(time_limit, depth)
             print(f'bestmove {self.board.uci(move)}', flush=True)
             global kill_search
             kill_search = False
