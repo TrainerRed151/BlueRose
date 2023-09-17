@@ -147,8 +147,7 @@ class BlueRose:
                 return ttEntry[ttVALUE], None, 1
 
         if self.board.is_checkmate():
-            score = -MAX_SCORE
-            return score, None, 1
+            return -MAX_SCORE, None, 1
 
         if self.board.is_stalemate():
             return 0, None, 1
@@ -316,7 +315,7 @@ if __name__ == '__main__':
     kill_search = False
 
     if len(sys.argv) == 2 and sys.argv[1] == 'test':
-        engine.uci('go depth 6')
+        engine.uci('go depth 7')
         exit()
 
     while True:
