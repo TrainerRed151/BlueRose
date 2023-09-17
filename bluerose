@@ -12,6 +12,7 @@ MOVES_TO_ENDGAME = 30
 
 ttDEPTH, ttFLAG, ttVALUE = 0, 1, 2
 ttEXACT, ttLOWERBOUND, ttUPPERBOUND = 0, 1, 2
+TRANSPOSITION_TABLE_SIZE = 0x100000
 
 POSITION_VALUES = [
     # King (end game)
@@ -100,7 +101,10 @@ PIECE_VALUES = [0, 100, 320, 330, 500, 900, 0]
 class BlueRose:
     def __init__(self):
         self.board = chess.Board()
-        self.transposition_table = {}
+        self.transposition_table = []
+
+    def transposition_table_clear(self):
+        self.transposition_table = [0]*TRANSPOSITION_TABLE_SIZE
 
     def board_evaluation(self):
         score = 0
@@ -117,13 +121,13 @@ class BlueRose:
         return score
 
     def transposition_table_lookup(self):
-        zhash = chess.polyglot.zobrist_hash(self.board)
-        if zhash in self.transposition_table:
+        zhash = chess.polyglot.zobrist_hash(self.board) & (TRANSPOSITION_TABLE_SIZE - 1)
+        if self.transposition_table[zhash] != 0:
             return self.transposition_table[zhash], zhash
         else:
             return None, zhash
 
-    def negamax(self, depth, alpha, beta, time_limit):
+    def negamax(self, depth, alpha, beta, time_limit, killer=False):
         global kill_search
         if kill_search or time.time() > time_limit:
             return None, None, 0
@@ -166,7 +170,14 @@ class BlueRose:
         best_move = None
 
         nodes = 0
-        for move in self.board.legal_moves:
+        global killer_move
+        if killer:
+            move_list = list(self.board.legal_moves)
+            move_list.insert(0, move_list.pop(move_list.index(killer_move)))
+        else:
+            move_list = self.board.legal_moves
+
+        for move in move_list:
             self.board.push(move)
             value, _, new_nodes = self.negamax(depth - 1, -beta, -alpha, time_limit)
             self.board.pop()
@@ -198,7 +209,7 @@ class BlueRose:
         return best_score, best_move, nodes
 
     def ai(self, move_time, max_depth):
-        self.transposition_table.clear()
+        self.transposition_table_clear()
 
         t1 = time.time()
         time_limit = t1 + move_time
@@ -208,9 +219,13 @@ class BlueRose:
         if best_move is None or best_score is None:
             return 0, list(self.board.legal_moves)[0]
 
+        global killer_move
+        killer_move = best_move
+
         best_score *= color
         time_ms = int((time.time() - t1) * 1000) + 1
         nps = int(nodes/time_ms * 1000)
+
         print(f'info depth 1 multipv 1 score cp {best_score} nodes {nodes} nps {nps} time {time_ms} pv {self.board.uci(best_move)}', flush=True)
 
         while True:
@@ -218,7 +233,7 @@ class BlueRose:
                 return best_score, best_move
 
             depth += 1
-            new_score, new_move, new_nodes = self.negamax(depth, -MAX_SCORE, MAX_SCORE, time_limit)
+            new_score, new_move, new_nodes = self.negamax(depth, -MAX_SCORE, MAX_SCORE, time_limit, killer=True)
             nodes += new_nodes
 
             if new_score is None:
@@ -295,14 +310,17 @@ class BlueRose:
 
 
 if __name__ == '__main__':
+    print('BlueRose 1 by Brian Pomerantz', flush=True)
     engine = BlueRose()
     global kill_search
     kill_search = False
-    print('BlueRose 1 by Brian Pomerantz', flush=True)
-    f = open("uci.log", 'w')
+
+    if len(sys.argv) == 2 and sys.argv[1] == 'test':
+        engine.uci('go depth 6')
+        exit()
+
     while True:
         uci_input = input()
-        f.write(uci_input + '\n')
         if uci_input == 'stop':
             kill_search = True
             continue
