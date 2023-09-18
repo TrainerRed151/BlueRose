@@ -133,52 +133,54 @@ class BlueRose:
 
         global kill_search
         if kill_search or time.time() > time_limit:
-            return None
+            return None, None
 
         alphaOrig = alpha
 
         ttEntry, zhash = self.transposition_table_lookup()
         if ttEntry and ttEntry[ttDEPTH] >= depth:
             if ttEntry[ttFLAG] == ttEXACT:
-                return ttEntry[ttVALUE]
+                return ttEntry[ttVALUE], None
             elif ttEntry[ttFLAG] == ttLOWERBOUND:
                 alpha = max(alpha, ttEntry[ttVALUE])
             elif ttEntry[ttFLAG] == ttUPPERBOUND:
                 beta = min(beta, ttEntry[ttVALUE])
 
             if alpha >= beta:
-                return ttEntry[ttVALUE]
+                return ttEntry[ttVALUE], None
 
         if self.board.is_checkmate():
-            return -MAX_SCORE
+            return -MAX_SCORE, None
 
         if self.board.is_stalemate():
-            return 0
+            return 0, None
 
         if self.board.is_insufficient_material():
-            return 0
+            return 0, None
 
         if self.board.is_repetition(3):
-            return 0
+            return 0, None
 
-        if depth == 1:
+        if depth == 0:
             score = self.board_evaluation()
             if not self.board.turn:
                 score = -score
 
-            return score
+            return score, None
 
         best_score = -MAX_SCORE - 1
 
         for move in self.board.legal_moves:
             self.board.push(move)
-            value = self.negamax(depth - 1, -beta, -alpha, time_limit)
+            value, _ = self.negamax(depth - 1, -beta, -alpha, time_limit)
             self.board.pop()
 
             if value is None:
-                return None
+                return None, None
 
-            best_score = max(best_score, -value)
+            value = -value
+            if value > best_score:
+                best_score, best_move = value, move
 
             alpha = max(best_score, alpha)
             if alpha >= beta:
@@ -195,7 +197,7 @@ class BlueRose:
         new_ttEntry[ttDEPTH] = depth
         self.transposition_table[zhash] = new_ttEntry
 
-        return best_score
+        return best_score, best_move
 
     def MTDf(self, depth, first_guess, time_limit):
         g = first_guess
@@ -203,16 +205,17 @@ class BlueRose:
         lowerbound = -MAX_SCORE
         while lowerbound < upperbound:
             beta = max(g, lowerbound + 1)
-            g = -self.negamax(depth, beta - 1, beta, time_limit)
+            g, move = self.negamax(depth, beta - 1, beta, time_limit)
+
             if g is None:
-                return None
+                return None, None
 
             if g < beta:
                 upperbound = g
             else:
                 lowerbound = g
 
-        return g
+        return g, move
 
     def iterative_deepening(self, move_time, max_depth):
         self.transposition_table_clear()
@@ -229,24 +232,18 @@ class BlueRose:
         depth = 1
         first_guess = 0
         while True:
-            best_score = -MAX_SCORE - 1
-            for move in self.board.legal_moves:
-                self.board.push(move)
-                first_guess = self.MTDf(depth, first_guess, time_limit)
-                self.board.pop()
-                if first_guess is None:
-                    return best_move
+            first_guess, move = self.MTDf(depth, first_guess, time_limit)
+            if first_guess is None:
+                return best_move
 
-                if first_guess > best_score:
-                    best_score = first_guess
-                    best_move = move
+            best_move = move
 
             time_ms = int((time.time() - t1) * 1000) + 1
             nps = int(nodes/time_ms * 1000)
 
-            print(f'info depth {depth} multipv 1 score cp {color*best_score} nodes {nodes} nps {nps} time {time_ms} pv {self.board.uci(best_move)}', flush=True)
+            print(f'info depth {depth} multipv 1 score cp {color*first_guess} nodes {nodes} nps {nps} time {time_ms} pv {self.board.uci(best_move)}', flush=True)
 
-            if best_score == MAX_SCORE:
+            if first_guess == MAX_SCORE:
                 return best_move
 
             depth += 1
