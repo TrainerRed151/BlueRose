@@ -137,9 +137,15 @@ class BlueRose:
             pt = piece.piece_type
             if pt == chess.KING and self.board.fullmove_number > MOVES_TO_ENDGAME:
                 pt = 0
-            color = 1 if piece.color else -1
 
-            score += color*POSITION_VALUES[pt][square]
+            if piece.color:
+                color = 1
+                sq = square
+            else:
+                color = -1
+                sq = 63 - square
+
+            score += color*POSITION_VALUES[pt][sq]
 
         return score
 
