@@ -14,6 +14,9 @@ ttDEPTH, ttFLAG, ttVALUE = 0, 1, 2
 ttEXACT, ttLOWERBOUND, ttUPPERBOUND = 0, 1, 2
 TRANSPOSITION_TABLE_SIZE = 0x1000000
 
+# [King (end game), Pawn, Knight, Bishop, Rook, Queen, King]
+PIECE_VALUES = [0, 100, 320, 330, 500, 900, 0]
+
 POSITION_VALUES = [
     # King (end game)
     [
@@ -94,17 +97,11 @@ POSITION_VALUES = [
     ],
 ]
 
-# [King (end game), Pawn, Knight, Bishop, Rook, Queen, King]
-PIECE_VALUES = [0, 100, 320, 330, 500, 900, 0]
-
 
 class BlueRose:
     def __init__(self):
         self.board = chess.Board()
-        self.transposition_table = []
-
-    def transposition_table_clear(self):
-        self.transposition_table = [0]*TRANSPOSITION_TABLE_SIZE
+        self.transposition_table = {}
 
     def board_evaluation_2(self):
         score = 0
@@ -130,13 +127,6 @@ class BlueRose:
 
         return score
 
-    def transposition_table_lookup(self):
-        zhash = chess.polyglot.zobrist_hash(self.board) & (TRANSPOSITION_TABLE_SIZE - 1)
-        if self.transposition_table[zhash]:
-            return self.transposition_table[zhash], zhash
-        else:
-            return None, zhash
-
     def negamax(self, depth, alpha, beta, time_limit):
         global nodes
         nodes += 1
@@ -147,17 +137,21 @@ class BlueRose:
 
         alphaOrig = alpha
 
-        ttEntry, zhash = self.transposition_table_lookup()
-        if ttEntry and ttEntry[ttDEPTH] >= depth:
-            if ttEntry[ttFLAG] == ttEXACT:
-                return ttEntry[ttVALUE], None
-            elif ttEntry[ttFLAG] == ttLOWERBOUND:
-                alpha = max(alpha, ttEntry[ttVALUE])
-            elif ttEntry[ttFLAG] == ttUPPERBOUND:
-                beta = min(beta, ttEntry[ttVALUE])
+        zhash = chess.polyglot.zobrist_hash(self.board) & (TRANSPOSITION_TABLE_SIZE - 1)
+        try:
+            ttEntry = self.transposition_table[zhash]
+            if ttEntry[ttDEPTH] >= depth:
+                if ttEntry[ttFLAG] == ttEXACT:
+                    return ttEntry[ttVALUE], None
+                elif ttEntry[ttFLAG] == ttLOWERBOUND:
+                    alpha = max(alpha, ttEntry[ttVALUE])
+                elif ttEntry[ttFLAG] == ttUPPERBOUND:
+                    beta = min(beta, ttEntry[ttVALUE])
 
-            if alpha >= beta:
-                return ttEntry[ttVALUE], None
+                if alpha >= beta:
+                    return ttEntry[ttVALUE], None
+        except:
+            pass
 
         if self.board.is_checkmate():
             return -MAX_SCORE, None
@@ -228,7 +222,7 @@ class BlueRose:
         return g, move
 
     def iterative_deepening(self, move_time, max_depth):
-        self.transposition_table_clear()
+        self.transposition_table.clear()
 
         t1 = time.time()
         time_limit = t1 + move_time
