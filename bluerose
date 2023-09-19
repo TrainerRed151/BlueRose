@@ -196,16 +196,18 @@ class BlueRose:
         if not killer and depth > 2:
             _, killer = self.MTDf(depth - 3, alpha, time_limit)
 
+        move_list = []
         if killer:
-            move_list = list(self.board.generate_legal_moves())
-            try:
-                move_list.insert(0, move_list.pop(move_list.index(killer)))
-            except:
-                move_list = self.board.legal_moves
-        else:
-            move_list = self.board.legal_moves
+            move_list.append(killer)
 
+        move_list.extend(self.board.generate_legal_captures())
+        move_list.extend(self.board.generate_legal_moves())
+        move_set = set()
         for move in move_list:
+            if move in move_set:
+                continue
+            move_set.add(move)
+
             self.board.push(move)
             value, _ = self.negamax(depth - 1, -beta, -alpha, time_limit)
             self.board.pop()
