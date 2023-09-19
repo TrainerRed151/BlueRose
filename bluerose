@@ -105,12 +105,27 @@ class BlueRose:
         self.killer_heuristic_table = {}
 
     def board_evaluation_2(self):
-        score = 0
-        for piece in range(1, 6):
-            score += PIECE_VALUES[piece]*(
-                chess.popcount(self.board.pieces_mask(piece, True))
-                - chess.popcount(self.board.pieces_mask(piece, False))
-            )
+        mobility = self.board.legal_moves.count()
+        self.board.turn = not self.board.turn
+        mobility_other = self.board.legal_moves.count()
+        self.board.turn = not self.board.turn
+
+        score = 100*(
+            chess.popcount(self.board.pieces_mask(1, True))
+            - chess.popcount(self.board.pieces_mask(1, False))
+        ) + 300*(
+            chess.popcount(self.board.pieces_mask(2, True))
+            - chess.popcount(self.board.pieces_mask(2, False))
+        ) + 300*(
+            chess.popcount(self.board.pieces_mask(3, True))
+            - chess.popcount(self.board.pieces_mask(3, False))
+        ) + 500*(
+            chess.popcount(self.board.pieces_mask(4, True))
+            - chess.popcount(self.board.pieces_mask(4, False))
+        ) + 900*(
+            chess.popcount(self.board.pieces_mask(5, True))
+            - chess.popcount(self.board.pieces_mask(5, False))
+        ) + 10*(mobility - mobility_other)
 
         return score
 
