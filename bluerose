@@ -102,6 +102,7 @@ class BlueRose:
     def __init__(self):
         self.board = chess.Board()
         self.transposition_table = {}
+        self.killer_heuristic_table = {}
 
     def board_evaluation_2(self):
         score = 0
@@ -137,21 +138,18 @@ class BlueRose:
 
         alphaOrig = alpha
 
-        zhash = chess.polyglot.zobrist_hash(self.board) & (TRANSPOSITION_TABLE_SIZE - 1)
-        try:
-            ttEntry = self.transposition_table[zhash]
-            if ttEntry[ttDEPTH] >= depth:
-                if ttEntry[ttFLAG] == ttEXACT:
-                    return ttEntry[ttVALUE], None
-                elif ttEntry[ttFLAG] == ttLOWERBOUND:
-                    alpha = max(alpha, ttEntry[ttVALUE])
-                elif ttEntry[ttFLAG] == ttUPPERBOUND:
-                    beta = min(beta, ttEntry[ttVALUE])
+        zhash = chess.polyglot.zobrist_hash(self.board) #& (TRANSPOSITION_TABLE_SIZE - 1)
+        ttEntry = self.transposition_table.get(zhash)
+        if ttEntry and ttEntry[ttDEPTH] >= depth:
+            if ttEntry[ttFLAG] == ttEXACT:
+                return ttEntry[ttVALUE], None
+            elif ttEntry[ttFLAG] == ttLOWERBOUND:
+                alpha = max(alpha, ttEntry[ttVALUE])
+            elif ttEntry[ttFLAG] == ttUPPERBOUND:
+                beta = min(beta, ttEntry[ttVALUE])
 
-                if alpha >= beta:
-                    return ttEntry[ttVALUE], None
-        except:
-            pass
+            if alpha >= beta:
+                return ttEntry[ttVALUE], None
 
         if self.board.is_checkmate():
             return -MAX_SCORE, None
@@ -174,7 +172,17 @@ class BlueRose:
 
         best_score = -MAX_SCORE - 1
 
-        for move in self.board.legal_moves:
+        killer = self.killer_heuristic_table.get(zhash)
+        if killer:
+            move_list = list(self.board.generate_legal_moves())
+            try:
+                move_list.insert(0, move_list.pop(move_list.index(killer)))
+            except:
+                move_list = self.board.legal_moves
+        else:
+            move_list = self.board.legal_moves
+
+        for move in move_list:
             self.board.push(move)
             value, _ = self.negamax(depth - 1, -beta, -alpha, time_limit)
             self.board.pop()
@@ -188,6 +196,7 @@ class BlueRose:
 
             alpha = max(best_score, alpha)
             if alpha >= beta:
+                self.killer_heuristic_table[zhash] = move
                 break
 
         new_ttEntry = [0, 0, 0]
@@ -223,6 +232,7 @@ class BlueRose:
 
     def iterative_deepening(self, move_time, max_depth):
         self.transposition_table.clear()
+        self.killer_heuristic_table.clear()
 
         t1 = time.time()
         time_limit = t1 + move_time
@@ -325,7 +335,7 @@ if __name__ == '__main__':
             POSITION_VALUES[i][sq] += PIECE_VALUES[i]
 
     if len(sys.argv) == 2 and sys.argv[1] == 'test':
-        engine.uci('go depth 7')
+        engine.uci('go depth 8')
         exit()
 
     while True:
