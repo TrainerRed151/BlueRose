@@ -7,12 +7,12 @@ import time
 import sys
 
 
-MAX_SCORE = 100000
+MAX_SCORE = 10000
 MOVES_TO_ENDGAME = 30
 
 ttDEPTH, ttFLAG, ttVALUE = 0, 1, 2
 ttEXACT, ttLOWERBOUND, ttUPPERBOUND = 0, 1, 2
-TRANSPOSITION_TABLE_SIZE = 0x100000
+TRANSPOSITION_TABLE_SIZE = 0x1000000
 
 POSITION_VALUES = [
     # King (end game)
@@ -106,6 +106,16 @@ class BlueRose:
     def transposition_table_clear(self):
         self.transposition_table = [0]*TRANSPOSITION_TABLE_SIZE
 
+    def board_evaluation_2(self):
+        score = 0
+        for piece in range(1, 6):
+            score += PIECE_VALUES[piece]*(
+                chess.popcount(self.board.pieces_mask(piece, True))
+                - chess.popcount(self.board.pieces_mask(piece, False))
+            )
+
+        return score
+
     def board_evaluation(self):
         score = 0
         for square, piece in self.board.piece_map().items():
@@ -114,9 +124,7 @@ class BlueRose:
                 pt = 0
             color = 1 if piece.color else -1
 
-            piece_value = PIECE_VALUES[pt]
-            position_adjustment = POSITION_VALUES[pt][square]
-            score += color * (piece_value + position_adjustment)
+            score += color*POSITION_VALUES[pt][square]
 
         return score
 
@@ -243,7 +251,7 @@ class BlueRose:
 
             print(f'info depth {depth} multipv 1 score cp {color*first_guess} nodes {nodes} nps {nps} time {time_ms} pv {self.board.uci(best_move)}', flush=True)
 
-            if first_guess == MAX_SCORE:
+            if abs(first_guess) == MAX_SCORE:
                 return best_move
 
             depth += 1
@@ -315,6 +323,10 @@ if __name__ == '__main__':
     engine = BlueRose()
     global kill_search
     kill_search = False
+
+    for i in range(1, 6):
+        for sq in range(64):
+            POSITION_VALUES[i][sq] += PIECE_VALUES[i]
 
     if len(sys.argv) == 2 and sys.argv[1] == 'test':
         engine.uci('go depth 7')
