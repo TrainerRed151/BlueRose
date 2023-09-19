@@ -118,7 +118,9 @@ class BlueRose:
 
     def board_evaluation(self):
         score = 0
-        for square, piece in self.board.piece_map().items():
+        p_at = self.board.piece_at
+        for square in chess.scan_reversed(self.board.occupied):
+            piece = p_at(square)
             pt = piece.piece_type
             if pt == chess.KING and self.board.fullmove_number > MOVES_TO_ENDGAME:
                 pt = 0
@@ -130,7 +132,7 @@ class BlueRose:
 
     def transposition_table_lookup(self):
         zhash = chess.polyglot.zobrist_hash(self.board) & (TRANSPOSITION_TABLE_SIZE - 1)
-        if self.transposition_table[zhash] != 0:
+        if self.transposition_table[zhash]:
             return self.transposition_table[zhash], zhash
         else:
             return None, zhash
