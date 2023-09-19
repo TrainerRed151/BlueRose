@@ -140,10 +140,10 @@ class BlueRose:
 
             if piece.color:
                 color = 1
-                sq = square
+                sq = 63 - square
             else:
                 color = -1
-                sq = 63 - square
+                sq = square
 
             score += color*POSITION_VALUES[pt][sq]
 
