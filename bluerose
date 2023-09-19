@@ -173,6 +173,9 @@ class BlueRose:
         best_score = -MAX_SCORE - 1
 
         killer = self.killer_heuristic_table.get(zhash)
+        if not killer and depth > 2:
+            _, killer = self.MTDf(depth - 3, alpha, time_limit)
+
         if killer:
             move_list = list(self.board.generate_legal_moves())
             try:
@@ -196,7 +199,6 @@ class BlueRose:
 
             alpha = max(best_score, alpha)
             if alpha >= beta:
-                self.killer_heuristic_table[zhash] = move
                 break
 
         new_ttEntry = [0, 0, 0]
@@ -209,6 +211,7 @@ class BlueRose:
             new_ttEntry[ttFLAG] = ttEXACT
         new_ttEntry[ttDEPTH] = depth
         self.transposition_table[zhash] = new_ttEntry
+        self.killer_heuristic_table[zhash] = best_move
 
         return best_score, best_move
 
